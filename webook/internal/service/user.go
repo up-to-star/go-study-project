@@ -23,11 +23,13 @@ func NewUserService(repo *repository.UserRepository) *UserService {
 }
 
 func (svc *UserService) Signup(ctx context.Context, u domain.User) error {
+	// 加密
 	hash, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
 	}
 	u.Password = string(hash)
+	// 存起来
 	return svc.repo.Create(ctx, u)
 }
 
@@ -44,4 +46,8 @@ func (svc *UserService) Login(ctx context.Context, email string, password string
 		return domain.User{}, ErrInvalidUserOrPassword
 	}
 	return u, nil
+}
+
+func (svc *UserService) Profile(ctx context.Context, id int64) (domain.User, error) {
+	return svc.repo.FindById(ctx, id)
 }

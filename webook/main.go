@@ -17,6 +17,19 @@ import (
 )
 
 func main() {
+	server := initWebServer()
+	//store := cookie.NewStore([]byte("secret"))
+	store := memstore.NewStore([]byte("uX6}oS1`eP0:jY0-oI9:oE4^wD2;tL4@"), []byte("zI1|eP7%tJ7_nD4%tK0;cB6.zU7~sT2>"))
+	server.Use(sessions.Sessions("mysession", store))
+	server.Use(middleware.NewLoginMiddlewareBuilder().IgnorePaths("/users/login").
+		IgnorePaths("/users/signup").IgnorePaths("/users/profile").Build())
+	db := initDB()
+	u := initUser(db)
+	u.RegisterRoutes(server)
+	server.Run(":8080")
+}
+
+func initWebServer() *gin.Engine {
 	server := gin.Default()
 	server.Use(cors.New(cors.Config{
 		AllowOrigins: []string{"http://localhost:3000"},
@@ -33,12 +46,11 @@ func main() {
 		},
 		MaxAge: 12 * time.Hour,
 	}))
-	//store := cookie.NewStore([]byte("secret"))
-	store := memstore.NewStore([]byte("uX6}oS1`eP0:jY0-oI9:oE4^wD2;tL4@"), []byte("zI1|eP7%tJ7_nD4%tK0;cB6.zU7~sT2>"))
-	server.Use(sessions.Sessions("mysession", store))
-	server.Use(middleware.NewLoginMiddlewareBuilder().IgnorePaths("/users/login").
-		IgnorePaths("/users/signup").Build())
-	dsn := "root:root@tcp(127.0.0.1:13316)/webook?charset=utf8mb4&parseTime=True&loc=Local"
+	return server
+}
+
+func initDB() *gorm.DB {
+	dsn := "root:root@tcp(localhost:13316)/webook?charset=utf8mb4&parseTime=True&loc=Local"
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
 		panic("failed to connect database")
@@ -47,10 +59,13 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	return db
+}
+
+func initUser(db *gorm.DB) *web.UserHandler {
 	ud := dao.NewUserDAO(db)
 	repo := repository.NewUserRepository(ud)
 	svc := service.NewUserService(repo)
 	u := web.NewUserHandler(svc)
-	u.RegisterRoutes(server)
-	server.Run(":8080")
+	return u
 }

@@ -42,11 +42,19 @@ func (dao *UserDAO) FindByEmail(ctx context.Context, email string) (User, error)
 	return u, err
 }
 
-// User 直接对应数据库表
+func (dao *UserDAO) FindById(ctx context.Context, id int64) (User, error) {
+	var u User
+	err := dao.db.WithContext(ctx).Where("id = ?", id).First(&u).Error
+	return u, err
+}
+
+// User 直接对应数据库表, entity 或 model
 type User struct {
 	Id       int64  `gorm:"primaryKey,autoIncrement"`
 	Email    string `gorm:"unique"`
 	Password string
+	NickName string `gorm:"size:36"`
+	Birthday int64
 	Ctime    int64
 	Utime    int64
 }

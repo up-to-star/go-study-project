@@ -8,6 +8,7 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"strconv"
 )
 
 const (
@@ -81,7 +82,10 @@ func (u *UserHandler) Signup(ctx *gin.Context) {
 		ctx.String(http.StatusOK, "邮箱冲突")
 		return
 	}
-	ctx.String(http.StatusOK, "注册成功")
+	ctx.JSON(http.StatusOK, &Result{
+		Code:    0,
+		Message: "注册成功",
+	})
 }
 
 func (u *UserHandler) Login(ctx *gin.Context) {
@@ -106,7 +110,11 @@ func (u *UserHandler) Login(ctx *gin.Context) {
 	sess := sessions.Default(ctx)
 	sess.Set("userId", user.Id)
 	sess.Save()
-	ctx.String(http.StatusOK, "登录成功")
+	//ctx.String(http.StatusOK, "登录成功")
+	ctx.JSON(http.StatusOK, &Result{
+		Code:    0,
+		Message: "登录成功",
+	})
 	return
 }
 
@@ -115,5 +123,34 @@ func (u *UserHandler) Edit(ctx *gin.Context) {
 }
 
 func (u *UserHandler) Profile(ctx *gin.Context) {
+	userId := ctx.Query("userid")
+	id, err := strconv.ParseInt(userId, 10, 64)
+	if err != nil {
+		return
+	}
 
+	user, err := u.svc.Profile(ctx, id)
+	if err != nil {
+		ctx.JSON(http.StatusOK, &Result{
+			Code:    1,
+			Message: "用户信息不存在",
+		})
+		return
+	}
+	type Response struct {
+		Id       int64
+		Email    string
+		NickName string
+		Birthday string
+	}
+	ctx.JSON(http.StatusOK, &Result{
+		Code:    0,
+		Message: "ok",
+		Data: &Response{
+			Id:       user.Id,
+			Email:    user.Email,
+			NickName: user.NickName,
+			Birthday: user.Birthday.Format("2006-01-02 15:04:05"),
+		},
+	})
 }

@@ -4,6 +4,7 @@ import (
 	"basic_go/webook/internal/domain"
 	"basic_go/webook/internal/repository/dao"
 	"context"
+	"time"
 )
 
 var ErrUserDuplicateEmail = dao.ErrUserDuplicateEmail
@@ -18,7 +19,20 @@ func NewUserRepository(dao *dao.UserDAO) *UserRepository {
 }
 
 // FindById 屏蔽数据存储的逻辑，不管是cache还是mysql
-func (r *UserRepository) FindById(int64) {
+func (r *UserRepository) FindById(ctx context.Context, id int64) (domain.User, error) {
+	u, err := r.dao.FindById(ctx, id)
+	if err != nil {
+		return domain.User{}, err
+	}
+
+	return domain.User{
+		Id:       u.Id,
+		Email:    u.Email,
+		NickName: u.NickName,
+		Password: u.Password,
+		Birthday: time.UnixMilli(u.Birthday),
+		Ctime:    time.UnixMilli(u.Ctime),
+	}, nil
 
 }
 
