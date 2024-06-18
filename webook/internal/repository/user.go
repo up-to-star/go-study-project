@@ -30,6 +30,7 @@ func (r *UserRepository) FindById(ctx context.Context, id int64) (domain.User, e
 		Email:    u.Email,
 		NickName: u.NickName,
 		Password: u.Password,
+		AboutMe:  u.AboutMe,
 		Birthday: time.UnixMilli(u.Birthday),
 		Ctime:    time.UnixMilli(u.Ctime),
 	}, nil

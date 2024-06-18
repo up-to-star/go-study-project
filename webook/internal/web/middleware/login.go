@@ -4,6 +4,7 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"time"
 )
 
 type LoginMiddlewareBuilder struct {
@@ -27,9 +28,25 @@ func (l *LoginMiddlewareBuilder) Build() gin.HandlerFunc {
 		//}
 		sess := sessions.Default(ctx)
 		id := sess.Get("userId")
+		sess.Set("userId", id)
+		sess.Options(sessions.Options{
+			MaxAge: 60,
+		})
 		if id == nil {
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
+		}
+		updateTime := sess.Get("update_time")
+		now := time.Now().UnixMilli()
+		if updateTime == nil {
+			sess.Set("update_time", now)
+			sess.Save()
+			return
+		}
+		updateTimeval, _ := updateTime.(int64)
+		if now-updateTimeval >= 60*60*1000 {
+			sess.Set("update_time", now)
+			sess.Save()
 		}
 	}
 }

@@ -55,6 +55,7 @@ type User struct {
 	Password string
 	NickName string `gorm:"size:36"`
 	Birthday int64
+	AboutMe  string
 	Ctime    int64
 	Utime    int64
 }

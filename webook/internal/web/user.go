@@ -8,7 +8,6 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"net/http"
-	"strconv"
 )
 
 const (
@@ -109,6 +108,11 @@ func (u *UserHandler) Login(ctx *gin.Context) {
 	// 设置session
 	sess := sessions.Default(ctx)
 	sess.Set("userId", user.Id)
+	sess.Options(sessions.Options{
+		//Secure: true,
+		HttpOnly: true,
+		MaxAge:   60,
+	})
 	sess.Save()
 	//ctx.String(http.StatusOK, "登录成功")
 	ctx.JSON(http.StatusOK, &Result{
@@ -123,11 +127,8 @@ func (u *UserHandler) Edit(ctx *gin.Context) {
 }
 
 func (u *UserHandler) Profile(ctx *gin.Context) {
-	userId := ctx.Query("userid")
-	id, err := strconv.ParseInt(userId, 10, 64)
-	if err != nil {
-		return
-	}
+	sess := sessions.Default(ctx)
+	id := sess.Get("userId").(int64)
 
 	user, err := u.svc.Profile(ctx, id)
 	if err != nil {
@@ -142,6 +143,7 @@ func (u *UserHandler) Profile(ctx *gin.Context) {
 		Email    string
 		NickName string
 		Birthday string
+		AboutMe  string
 	}
 	ctx.JSON(http.StatusOK, &Result{
 		Code:    0,
@@ -152,5 +154,17 @@ func (u *UserHandler) Profile(ctx *gin.Context) {
 			NickName: user.NickName,
 			Birthday: user.Birthday.Format("2006-01-02 15:04:05"),
 		},
+	})
+}
+
+func (u *UserHandler) Logout(ctx *gin.Context) {
+	sess := sessions.Default(ctx)
+	sess.Options(sessions.Options{
+		MaxAge: -1,
+	})
+	sess.Save()
+	ctx.JSON(http.StatusOK, &Result{
+		Code:    0,
+		Message: "退出登录成功",
 	})
 }
