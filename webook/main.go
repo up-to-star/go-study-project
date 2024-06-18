@@ -26,7 +26,9 @@ func main() {
 		panic(err)
 	}
 	server.Use(sessions.Sessions("mysession", store))
-	server.Use(middleware.NewLoginMiddlewareBuilder().IgnorePaths("/users/login").
+	//server.Use(middleware.NewLoginMiddlewareBuilder().IgnorePaths("/users/login").
+	//	IgnorePaths("/users/signup").Build())
+	server.Use(middleware.NewLoginJWTMiddlewareBuilder().IgnorePaths("/users/login").
 		IgnorePaths("/users/signup").Build())
 	db := initDB()
 	u := initUser(db)
@@ -40,7 +42,8 @@ func initWebServer() *gin.Engine {
 		AllowOrigins: []string{"http://localhost:3000"},
 		AllowMethods: []string{"PUT", "PATCH", "POST", "GET"},
 		AllowHeaders: []string{"Content-Type", "Authorization"},
-		//ExposeHeaders:    []string{"Content-Type", "Authorization"},
+		// 让前端拿到token
+		ExposeHeaders:    []string{"x-jwt-token"},
 		AllowCredentials: true,
 		AllowOriginFunc: func(origin string) bool {
 			//return origin == "https://github.com"
