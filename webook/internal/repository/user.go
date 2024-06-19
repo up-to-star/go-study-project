@@ -28,7 +28,7 @@ func (r *UserRepository) FindById(ctx context.Context, id int64) (domain.User, e
 	return domain.User{
 		Id:       u.Id,
 		Email:    u.Email,
-		NickName: u.NickName,
+		Nickname: u.Nickname,
 		Password: u.Password,
 		AboutMe:  u.AboutMe,
 		Birthday: time.UnixMilli(u.Birthday),

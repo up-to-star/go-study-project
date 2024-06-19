@@ -53,7 +53,7 @@ type User struct {
 	Id       int64  `gorm:"primaryKey,autoIncrement"`
 	Email    string `gorm:"unique"`
 	Password string
-	NickName string `gorm:"size:36"`
+	Nickname string `gorm:"size:36"`
 	Birthday int64
 	AboutMe  string
 	Ctime    int64

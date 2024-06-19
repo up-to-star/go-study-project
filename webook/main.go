@@ -12,27 +12,21 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"net/http"
 	"strings"
 	"time"
 )
 
 func main() {
-	server := initWebServer()
-	//store := cookie.NewStore([]byte("secret"))
-	//store := memstore.NewStore([]byte("uX6}oS1`eP0:jY0-oI9:oE4^wD2;tL4@"), []byte("zI1|eP7%tJ7_nD4%tK0;cB6.zU7~sT2>"))
-	store, err := redis.NewStore(16, "tcp", "localhost:6379", "",
-		[]byte("uX6}oS1`eP0:jY0-oI9:oE4^wD2;tL4@"), []byte("zI1|eP7%tJ7_nD4%tK0;cB6.zU7~sT2>"))
-	if err != nil {
-		panic(err)
-	}
-	server.Use(sessions.Sessions("mysession", store))
-	//server.Use(middleware.NewLoginMiddlewareBuilder().IgnorePaths("/users/login").
-	//	IgnorePaths("/users/signup").Build())
-	server.Use(middleware.NewLoginJWTMiddlewareBuilder().IgnorePaths("/users/login").
-		IgnorePaths("/users/signup").Build())
-	db := initDB()
-	u := initUser(db)
-	u.RegisterRoutes(server)
+	//server := initWebServer()
+
+	//db := initDB()
+	//u := initUser(db)
+	//u.RegisterRoutes(server)
+	server := gin.Default()
+	server.GET("/hello", func(ctx *gin.Context) {
+		ctx.String(http.StatusOK, "你好，你来了")
+	})
 	server.Run(":8080")
 }
 
@@ -54,6 +48,18 @@ func initWebServer() *gin.Engine {
 		},
 		MaxAge: 12 * time.Hour,
 	}))
+	//store := cookie.NewStore([]byte("secret"))
+	//store := memstore.NewStore([]byte("uX6}oS1`eP0:jY0-oI9:oE4^wD2;tL4@"), []byte("zI1|eP7%tJ7_nD4%tK0;cB6.zU7~sT2>"))
+	store, err := redis.NewStore(16, "tcp", "localhost:6379", "",
+		[]byte("uX6}oS1`eP0:jY0-oI9:oE4^wD2;tL4@"), []byte("zI1|eP7%tJ7_nD4%tK0;cB6.zU7~sT2>"))
+	if err != nil {
+		panic(err)
+	}
+	server.Use(sessions.Sessions("mysession", store))
+	//server.Use(middleware.NewLoginMiddlewareBuilder().IgnorePaths("/users/login").
+	//	IgnorePaths("/users/signup").Build())
+	server.Use(middleware.NewLoginJWTMiddlewareBuilder().IgnorePaths("/users/login").
+		IgnorePaths("/users/signup").Build())
 	return server
 }
 

@@ -4,12 +4,12 @@ import (
 	"basic_go/webook/internal/domain"
 	"basic_go/webook/internal/service"
 	"errors"
-	"fmt"
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	jwt "github.com/golang-jwt/jwt/v5"
 	"net/http"
+	"time"
 )
 
 const (
@@ -34,7 +34,7 @@ func NewUserHandler(svc *service.UserService) *UserHandler {
 
 func (u *UserHandler) RegisterRoutes(server *gin.Engine) {
 	ug := server.Group("/users")
-	ug.GET("/profile", u.Profile)
+	ug.GET("/profile", u.ProfileJWT)
 	ug.POST("/signup", u.Signup)
 	ug.POST("/login", u.LoginJWT)
 	ug.POST("/edit", u.Edit)
@@ -143,7 +143,7 @@ func (u *UserHandler) Profile(ctx *gin.Context) {
 	type Response struct {
 		Id       int64
 		Email    string
-		NickName string
+		Nickname string
 		Birthday string
 		AboutMe  string
 	}
@@ -153,7 +153,7 @@ func (u *UserHandler) Profile(ctx *gin.Context) {
 		Data: &Response{
 			Id:       user.Id,
 			Email:    user.Email,
-			NickName: user.NickName,
+			Nickname: user.Nickname,
 			Birthday: user.Birthday.Format("2006-01-02 15:04:05"),
 		},
 	})
@@ -192,17 +192,67 @@ func (u *UserHandler) LoginJWT(ctx *gin.Context) {
 	}
 
 	// 用JWT设置登录态，生成JWT token
-	token := jwt.New(jwt.SigningMethodHS512)
+	claims := UserClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 24 * 7)),
+		},
+		Uid:       user.Id,
+		UserAgent: ctx.Request.UserAgent(),
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
 	tokenStr, err := token.SignedString([]byte("uX6}oS1`eP0:jY0-oI9:oE4^wD2;tL4@"))
 	if err != nil {
 		ctx.String(http.StatusInternalServerError, "系统错误")
 		return
 	}
 	ctx.Header("x-jwt-token", tokenStr)
-	fmt.Println(user)
 	ctx.JSON(http.StatusOK, &Result{
 		Code:    0,
 		Message: "登录成功",
 	})
 	return
+}
+
+func (u *UserHandler) ProfileJWT(ctx *gin.Context) {
+	c, ok := ctx.Get("claims")
+	if !ok {
+		ctx.String(http.StatusOK, "系统错误")
+	}
+	claims, ok := c.(*UserClaims)
+	if !ok {
+		ctx.String(http.StatusOK, "系统错误")
+	}
+	id := claims.Uid
+
+	user, err := u.svc.Profile(ctx, id)
+	if err != nil {
+		ctx.JSON(http.StatusOK, &Result{
+			Code:    1,
+			Message: "用户信息不存在",
+		})
+		return
+	}
+	type Response struct {
+		Id       int64
+		Email    string
+		Nickname string
+		Birthday string
+		AboutMe  string
+	}
+	ctx.JSON(http.StatusOK, &Result{
+		Code:    0,
+		Message: "ok",
+		Data: &Response{
+			Id:       user.Id,
+			Email:    user.Email,
+			Nickname: user.Nickname,
+			Birthday: user.Birthday.Format("2006-01-02 15:04:05"),
+		},
+	})
+}
+
+type UserClaims struct {
+	jwt.RegisteredClaims
+	Uid       int64
+	UserAgent string
 }
