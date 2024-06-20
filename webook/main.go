@@ -64,7 +64,7 @@ func initWebServer() *gin.Engine {
 }
 
 func initDB() *gorm.DB {
-	dsn := "root:root@tcp(localhost:13316)/webook?charset=utf8mb4&parseTime=True&loc=Local"
+	dsn := "root:root@tcp(localhost:30001)/webook?charset=utf8mb4&parseTime=True&loc=Local"
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
 		panic("failed to connect database")
