@@ -194,7 +194,7 @@ func (u *UserHandler) LoginJWT(ctx *gin.Context) {
 	// 用JWT设置登录态，生成JWT token
 	claims := UserClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 24 * 7)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
 		},
 		Uid:       user.Id,
 		UserAgent: ctx.Request.UserAgent(),

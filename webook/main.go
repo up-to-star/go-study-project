@@ -1,6 +1,7 @@
 package main
 
 import (
+	"basic_go/webook/config"
 	"basic_go/webook/internal/repository"
 	"basic_go/webook/internal/repository/dao"
 	"basic_go/webook/internal/service"
@@ -18,12 +19,12 @@ import (
 )
 
 func main() {
-	//server := initWebServer()
+	server := initWebServer()
 
-	//db := initDB()
-	//u := initUser(db)
-	//u.RegisterRoutes(server)
-	server := gin.Default()
+	db := initDB()
+	u := initUser(db)
+	u.RegisterRoutes(server)
+	//server := gin.Default()
 	server.GET("/hello", func(ctx *gin.Context) {
 		ctx.String(http.StatusOK, "你好，你来了")
 	})
@@ -50,7 +51,7 @@ func initWebServer() *gin.Engine {
 	}))
 	//store := cookie.NewStore([]byte("secret"))
 	//store := memstore.NewStore([]byte("uX6}oS1`eP0:jY0-oI9:oE4^wD2;tL4@"), []byte("zI1|eP7%tJ7_nD4%tK0;cB6.zU7~sT2>"))
-	store, err := redis.NewStore(16, "tcp", "localhost:6379", "",
+	store, err := redis.NewStore(16, "tcp", config.Config.Redis.Addr, "",
 		[]byte("uX6}oS1`eP0:jY0-oI9:oE4^wD2;tL4@"), []byte("zI1|eP7%tJ7_nD4%tK0;cB6.zU7~sT2>"))
 	if err != nil {
 		panic(err)
@@ -64,7 +65,7 @@ func initWebServer() *gin.Engine {
 }
 
 func initDB() *gorm.DB {
-	dsn := "root:root@tcp(localhost:30001)/webook?charset=utf8mb4&parseTime=True&loc=Local"
+	dsn := config.Config.DB.DSN
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
 		panic("failed to connect database")

@@ -52,7 +52,7 @@ func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
-		if claims.ExpiresAt.Sub(time.Now()) < time.Hour*24 {
+		if claims.ExpiresAt.Sub(time.Now()) < time.Minute*50 {
 			claims.ExpiresAt = jwt.NewNumericDate(time.Now().Add(time.Minute))
 			tokenStr, err = token.SignedString([]byte("uX6}oS1`eP0:jY0-oI9:oE4^wD2;tL4@"))
 			if err != nil {
