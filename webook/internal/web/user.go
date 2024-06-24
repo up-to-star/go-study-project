@@ -239,6 +239,7 @@ func (u *UserHandler) ProfileJWT(ctx *gin.Context) {
 		Birthday string
 		AboutMe  string
 	}
+	//fmt.Println(user.Nickname)
 	ctx.JSON(http.StatusOK, &Result{
 		Code:    0,
 		Message: "ok",

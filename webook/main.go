@@ -3,14 +3,16 @@ package main
 import (
 	"basic_go/webook/config"
 	"basic_go/webook/internal/repository"
+	"basic_go/webook/internal/repository/cache"
 	"basic_go/webook/internal/repository/dao"
 	"basic_go/webook/internal/service"
 	"basic_go/webook/internal/web"
 	"basic_go/webook/internal/web/middleware"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/sessions"
-	"github.com/gin-contrib/sessions/redis"
+	"github.com/gin-contrib/sessions/memstore"
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"net/http"
@@ -22,7 +24,8 @@ func main() {
 	server := initWebServer()
 
 	db := initDB()
-	u := initUser(db)
+	rdb := initRedis()
+	u := initUser(db, rdb)
 	u.RegisterRoutes(server)
 	//server := gin.Default()
 	server.GET("/hello", func(ctx *gin.Context) {
@@ -50,12 +53,12 @@ func initWebServer() *gin.Engine {
 		MaxAge: 12 * time.Hour,
 	}))
 	//store := cookie.NewStore([]byte("secret"))
-	//store := memstore.NewStore([]byte("uX6}oS1`eP0:jY0-oI9:oE4^wD2;tL4@"), []byte("zI1|eP7%tJ7_nD4%tK0;cB6.zU7~sT2>"))
-	store, err := redis.NewStore(16, "tcp", config.Config.Redis.Addr, "",
-		[]byte("uX6}oS1`eP0:jY0-oI9:oE4^wD2;tL4@"), []byte("zI1|eP7%tJ7_nD4%tK0;cB6.zU7~sT2>"))
-	if err != nil {
-		panic(err)
-	}
+	store := memstore.NewStore([]byte("uX6}oS1`eP0:jY0-oI9:oE4^wD2;tL4@"), []byte("zI1|eP7%tJ7_nD4%tK0;cB6.zU7~sT2>"))
+	//store, err := redis.NewStore(16, "tcp", config.Config.Redis.Addr, "",
+	//	[]byte("uX6}oS1`eP0:jY0-oI9:oE4^wD2;tL4@"), []byte("zI1|eP7%tJ7_nD4%tK0;cB6.zU7~sT2>"))
+	//if err != nil {
+	//	panic(err)
+	//}
 	server.Use(sessions.Sessions("mysession", store))
 	//server.Use(middleware.NewLoginMiddlewareBuilder().IgnorePaths("/users/login").
 	//	IgnorePaths("/users/signup").Build())
@@ -77,9 +80,17 @@ func initDB() *gorm.DB {
 	return db
 }
 
-func initUser(db *gorm.DB) *web.UserHandler {
+func initRedis() *redis.Client {
+	rdb := redis.NewClient(&redis.Options{
+		Addr: config.Config.Redis.Addr,
+	})
+	return rdb
+}
+
+func initUser(db *gorm.DB, rdb *redis.Client) *web.UserHandler {
 	ud := dao.NewUserDAO(db)
-	repo := repository.NewUserRepository(ud)
+	rd := cache.NewUserCache(rdb)
+	repo := repository.NewUserRepository(ud, rd)
 	svc := service.NewUserService(repo)
 	u := web.NewUserHandler(svc)
 	return u
