@@ -33,7 +33,7 @@ func (svc *CodeService) Send(ctx context.Context, biz string, phone string) erro
 
 func (svc *CodeService) Verify(ctx context.Context, biz string, phone string, inputCode string) (bool, error) {
 	ok, err := svc.repo.Verify(ctx, biz, phone, inputCode)
-	if errors.Is(err, repository.ErrCodeVerifyToomany) {
+	if errors.Is(err, repository.ErrCodeVerifyTooMany) {
 		return false, nil
 	}
 	return ok, err

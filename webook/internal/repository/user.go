@@ -5,6 +5,7 @@ import (
 	"basic_go/webook/internal/repository/cache"
 	"basic_go/webook/internal/repository/dao"
 	"context"
+	"database/sql"
 	"fmt"
 	"time"
 )
@@ -33,15 +34,7 @@ func (r *UserRepository) FindById(ctx context.Context, id int64) (domain.User, e
 		return domain.User{}, err
 	}
 
-	u = domain.User{
-		Id:       u1.Id,
-		Email:    u1.Email,
-		Nickname: u1.Nickname,
-		Password: u1.Password,
-		AboutMe:  u1.AboutMe,
-		Birthday: time.UnixMilli(u1.Birthday),
-		Ctime:    time.UnixMilli(u1.Ctime),
-	}
+	u = r.entityToDomain(u1)
 	go func() {
 		err = r.cache.Set(ctx, u)
 		if err != nil {
@@ -55,7 +48,7 @@ func (r *UserRepository) FindById(ctx context.Context, id int64) (domain.User, e
 }
 
 func (r *UserRepository) Create(ctx context.Context, u domain.User) error {
-	return r.dao.Insert(ctx, dao.User{Email: u.Email, Password: u.Password})
+	return r.dao.Insert(ctx, r.domainToEntity(u))
 }
 
 func (r *UserRepository) FindByEmail(ctx context.Context, email string) (domain.User, error) {
@@ -63,14 +56,45 @@ func (r *UserRepository) FindByEmail(ctx context.Context, email string) (domain.
 	if err != nil {
 		return domain.User{}, err
 	}
-	ud := domain.User{
+	ud := r.entityToDomain(u)
+	return ud, nil
+}
+
+func (r *UserRepository) FindByPhone(ctx context.Context, phone string) (domain.User, error) {
+	u, err := r.dao.FindByPhone(ctx, phone)
+	if err != nil {
+		return domain.User{}, err
+	}
+	return r.entityToDomain(u), nil
+}
+
+func (r *UserRepository) entityToDomain(u dao.User) domain.User {
+	return domain.User{
 		Id:       u.Id,
-		Email:    u.Email,
-		Password: u.Password,
+		Email:    u.Email.String,
+		Phone:    u.Phone.String,
 		Nickname: u.Nickname,
 		AboutMe:  u.AboutMe,
 		Birthday: time.UnixMilli(u.Birthday),
 		Ctime:    time.UnixMilli(u.Ctime),
 	}
-	return ud, nil
+}
+
+func (r *UserRepository) domainToEntity(u domain.User) dao.User {
+	return dao.User{
+		Id: u.Id,
+		Email: sql.NullString{
+			String: u.Email,
+			Valid:  u.Email != "",
+		},
+		Phone: sql.NullString{
+			String: u.Phone,
+			Valid:  u.Phone != "",
+		},
+		Nickname: u.Nickname,
+		AboutMe:  u.AboutMe,
+		Password: u.Password,
+		Ctime:    u.Ctime.UnixMilli(),
+		Utime:    time.Now().UnixMilli(),
+	}
 }

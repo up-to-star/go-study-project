@@ -5,7 +5,8 @@ import (
 	"context"
 )
 
-var ErrCodeVerifyToomany = cache.ErrCodeVerifyTooMany
+var ErrCodeVerifyTooMany = cache.ErrCodeVerifyTooMany
+var ErrCodeSendTooMany = cache.ErrCodeSendTooMany
 
 type CodeRepository struct {
 	cache *cache.CodeCache
