@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-var ErrUserDuplicateEmail = dao.ErrUserDuplicateEmail
+var ErrUserDuplicateEmail = dao.ErrUserDuplicate
 var ErrUserNotFound = dao.ErrUserNotFount
 
 type UserRepository struct {

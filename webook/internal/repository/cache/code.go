@@ -10,6 +10,7 @@ import (
 
 //go:embed lua/set_code.lua
 var luaSetCode string
+
 var ErrCodeSendTooMany = errors.New("发送太频繁")
 var ErrCodeVerifyTooMany = errors.New("验证太频繁")
 

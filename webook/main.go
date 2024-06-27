@@ -6,7 +6,7 @@ import (
 	"basic_go/webook/internal/repository/cache"
 	"basic_go/webook/internal/repository/dao"
 	"basic_go/webook/internal/service"
-	"basic_go/webook/internal/service/sms/tencent"
+	"basic_go/webook/internal/service/sms/localsms"
 	"basic_go/webook/internal/web"
 	"basic_go/webook/internal/web/middleware"
 	"github.com/gin-contrib/cors"
@@ -14,9 +14,6 @@ import (
 	"github.com/gin-contrib/sessions/memstore"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
-	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common"
-	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile"
-	sms "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/sms/v20210111"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"net/http"
@@ -67,7 +64,8 @@ func initWebServer() *gin.Engine {
 	//server.Use(middleware.NewLoginMiddlewareBuilder().IgnorePaths("/users/login").
 	//	IgnorePaths("/users/signup").Build())
 	server.Use(middleware.NewLoginJWTMiddlewareBuilder().IgnorePaths("/users/login").
-		IgnorePaths("/users/signup").IgnorePaths("/users/login_sms/code/send").Build())
+		IgnorePaths("/users/signup").IgnorePaths("/users/login_sms/code/send").
+		IgnorePaths("/users/login_sms").Build())
 	return server
 }
 
@@ -98,11 +96,12 @@ func initUser(db *gorm.DB, rdb *redis.Client) *web.UserHandler {
 	svc := service.NewUserService(repo)
 	codeCache := cache.NewCodeCache(rdb)
 	codeRepo := repository.NewCodeRepository(codeCache)
-	smsClient, err := sms.NewClient(common.NewCredential("", ""), "ap-nanjing", profile.NewClientProfile())
-	if err != nil {
-		panic("smsClient初始化失败")
-	}
-	smsSvc := tencent.NewService(smsClient, "", "")
+	//smsClient, err := sms.NewClient(common.NewCredential("", ""), "ap-nanjing", profile.NewClientProfile())
+	//if err != nil {
+	//	panic("smsClient初始化失败")
+	//}
+	//smsSvc := tencent.NewService(smsClient, "", "")
+	smsSvc := localsms.NewService()
 	codeSvc := service.NewCodeService(codeRepo, smsSvc)
 	u := web.NewUserHandler(svc, codeSvc)
 	return u

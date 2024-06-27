@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-var ErrUserDuplicateEmail = errors.New("邮箱冲突")
+var ErrUserDuplicate = errors.New("邮箱或手机号冲突")
 var ErrUserNotFount = gorm.ErrRecordNotFound
 
 type UserDAO struct {
@@ -31,7 +31,7 @@ func (dao *UserDAO) Insert(ctx context.Context, u User) error {
 	if errors.As(err, &mysqlErr) {
 		const uniqueConflictsErrNo uint16 = 1062
 		if mysqlErr.Number == uniqueConflictsErrNo {
-			return ErrUserDuplicateEmail
+			return ErrUserDuplicate
 		}
 	}
 	return err
