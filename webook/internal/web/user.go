@@ -20,13 +20,13 @@ const (
 
 // UserHandler 定义和用户有关的所有路由
 type UserHandler struct {
-	svc              *service.UserService
-	codeSvc          *service.CodeService
+	svc              service.UserService
+	codeSvc          service.CodeService
 	emailRegexExp    *regexp.Regexp
 	passwordRegexExp *regexp.Regexp
 }
 
-func NewUserHandler(svc *service.UserService, codeSvc *service.CodeService) *UserHandler {
+func NewUserHandler(svc service.UserService, codeSvc service.CodeService) *UserHandler {
 	return &UserHandler{
 		emailRegexExp:    regexp.MustCompile(emailRegexPattern, regexp.None),
 		passwordRegexExp: regexp.MustCompile(passwordRegexPattern, regexp.None),
@@ -62,7 +62,7 @@ func (u *UserHandler) Signup(ctx *gin.Context) {
 	//fmt.Println(req)
 	isEmail, err := u.emailRegexExp.MatchString(req.Email)
 	if err != nil {
-		ctx.String(http.StatusOK, "系统错误")
+		ctx.String(http.StatusOK, "系统异常")
 		return
 	}
 	if !isEmail {
@@ -76,7 +76,7 @@ func (u *UserHandler) Signup(ctx *gin.Context) {
 	}
 	isPassword, err := u.passwordRegexExp.MatchString(req.Password)
 	if err != nil {
-		ctx.String(http.StatusOK, "系统错误")
+		ctx.String(http.StatusOK, "系统异常")
 		return
 	}
 	if !isPassword {
@@ -88,10 +88,7 @@ func (u *UserHandler) Signup(ctx *gin.Context) {
 		ctx.String(http.StatusOK, "邮箱冲突")
 		return
 	}
-	ctx.JSON(http.StatusOK, &Result{
-		Code:    0,
-		Message: "注册成功",
-	})
+	ctx.String(http.StatusOK, "注册成功")
 }
 
 func (u *UserHandler) Login(ctx *gin.Context) {
