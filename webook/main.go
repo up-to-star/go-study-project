@@ -7,8 +7,10 @@ import (
 	"basic_go/webook/internal/repository/dao"
 	"basic_go/webook/internal/service"
 	"basic_go/webook/internal/service/sms/localsms"
+	"basic_go/webook/internal/service/sms/ratelimit"
 	"basic_go/webook/internal/web"
 	"basic_go/webook/internal/web/middleware"
+	"basic_go/webook/pkg/limiter"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/memstore"
@@ -102,7 +104,8 @@ func initUser(db *gorm.DB, rdb *redis.Client) *web.UserHandler {
 	//}
 	//smsSvc := tencent.NewService(smsClient, "", "")
 	smsSvc := localsms.NewService()
-	codeSvc := service.NewCodeService(codeRepo, smsSvc)
+	rateSvc := ratelimit.NewRateLimitSMSService(smsSvc, limiter.NewRedisSlidingWindowLimiter(rdb, time.Second, 10))
+	codeSvc := service.NewCodeService(codeRepo, rateSvc)
 	u := web.NewUserHandler(svc, codeSvc)
 	return u
 }

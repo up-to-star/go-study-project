@@ -45,6 +45,6 @@ func (svc *codeService) Verify(ctx context.Context, biz string, phone string, in
 }
 
 func (svc *codeService) generate() string {
-	code := rand.Intn(10000000)
+	code := rand.Intn(1000000)
 	return fmt.Sprintf("%06d", code)
 }

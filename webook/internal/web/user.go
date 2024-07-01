@@ -107,7 +107,7 @@ func (u *UserHandler) Login(ctx *gin.Context) {
 		return
 	}
 	if err != nil {
-		ctx.String(http.StatusOK, "系统错误")
+		ctx.String(http.StatusOK, "系统异常")
 	}
 	// 设置session
 	sess := sessions.Default(ctx)

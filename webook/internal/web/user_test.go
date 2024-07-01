@@ -129,6 +129,22 @@ func TestUserHandler_Signup(t *testing.T) {
 			wantCode: http.StatusOK,
 			wangBody: "邮箱冲突",
 		},
+		//{
+		//	name: "系统异常",
+		//	mock: func(ctrl *gomock.Controller) service.UserService {
+		//		usersvc := svcmocks.NewMockUserService(ctrl)
+		//		usersvc.EXPECT().Signup(gomock.Any(), gomock.Any()).Return(errors.New("err any"))
+		//		return usersvc
+		//	},
+		//	reqBody: `
+		//			{
+		//				"email": "123@qq.com",
+		//				"password": "hello#world123",
+		//				"confirmPassword": "hello#world123"
+		//			}`,
+		//	wantCode: http.StatusOK,
+		//	wangBody: "系统异常",
+		//},
 	}
 
 	for _, tc := range testCases {
