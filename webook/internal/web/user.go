@@ -24,6 +24,7 @@ type UserHandler struct {
 	codeSvc          service.CodeService
 	emailRegexExp    *regexp.Regexp
 	passwordRegexExp *regexp.Regexp
+	jwtHandler
 }
 
 func NewUserHandler(svc service.UserService, codeSvc service.CodeService) *UserHandler {
@@ -336,10 +337,4 @@ func (u *UserHandler) LoginSMS(ctx *gin.Context) {
 		Code:    0,
 		Message: "登录成功",
 	})
-}
-
-type UserClaims struct {
-	jwt.RegisteredClaims
-	Uid       int64
-	UserAgent string
 }

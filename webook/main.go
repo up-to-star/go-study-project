@@ -6,6 +6,7 @@ import (
 	"basic_go/webook/internal/repository/cache"
 	"basic_go/webook/internal/repository/dao"
 	"basic_go/webook/internal/service"
+	"basic_go/webook/internal/service/oauth2/wechat"
 	"basic_go/webook/internal/service/sms/localsms"
 	"basic_go/webook/internal/service/sms/ratelimit"
 	"basic_go/webook/internal/web"
@@ -30,6 +31,8 @@ func main() {
 	rdb := initRedis()
 	u := initUser(db, rdb)
 	u.RegisterRoutes(server)
+	whd := initWechat("appid", "appSecrect", db, rdb)
+	whd.RegisterRoutes(server)
 	//server := gin.Default()
 	server.GET("/hello", func(ctx *gin.Context) {
 		ctx.String(http.StatusOK, "你好，你来了")
@@ -67,7 +70,10 @@ func initWebServer() *gin.Engine {
 	//	IgnorePaths("/users/signup").Build())
 	server.Use(middleware.NewLoginJWTMiddlewareBuilder().IgnorePaths("/users/login").
 		IgnorePaths("/users/signup").IgnorePaths("/users/login_sms/code/send").
-		IgnorePaths("/users/login_sms").Build())
+		IgnorePaths("/users/login_sms").
+		IgnorePaths("/oauth2/wechat/authurl").
+		IgnorePaths("oauth2/wechat/callback").
+		Build())
 	return server
 }
 
@@ -108,4 +114,13 @@ func initUser(db *gorm.DB, rdb *redis.Client) *web.UserHandler {
 	codeSvc := service.NewCodeService(codeRepo, rateSvc)
 	u := web.NewUserHandler(svc, codeSvc)
 	return u
+}
+
+func initWechat(appId string, appSecrect string, db *gorm.DB, rdb *redis.Client) *web.OAuth2WechatHandler {
+	svc := wechat.NewService(appId, appSecrect)
+	ud := dao.NewUserDAO(db)
+	rd := cache.NewUserCache(rdb)
+	repo := repository.NewUserRepository(ud, rd)
+	userSvc := service.NewUserService(repo)
+	return web.NewOAuth2WechatHandler(svc, userSvc)
 }
