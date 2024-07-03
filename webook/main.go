@@ -10,6 +10,7 @@ import (
 	"basic_go/webook/internal/service/sms/localsms"
 	"basic_go/webook/internal/service/sms/ratelimit"
 	"basic_go/webook/internal/web"
+	ijwt "basic_go/webook/internal/web/jwt"
 	"basic_go/webook/internal/web/middleware"
 	"basic_go/webook/pkg/limiter"
 	"github.com/gin-contrib/cors"
@@ -25,13 +26,13 @@ import (
 )
 
 func main() {
-	server := initWebServer()
-
 	db := initDB()
 	rdb := initRedis()
-	u := initUser(db, rdb)
+	jhd := ijwt.NewRedisJWTHandler(rdb)
+	server := initWebServer(jhd)
+	u := initUser(db, rdb, jhd)
 	u.RegisterRoutes(server)
-	whd := initWechat("appid", "appSecrect", db, rdb)
+	whd := initWechat("appid", "appSecrect", db, rdb, jhd)
 	whd.RegisterRoutes(server)
 	//server := gin.Default()
 	server.GET("/hello", func(ctx *gin.Context) {
@@ -40,7 +41,7 @@ func main() {
 	server.Run(":8080")
 }
 
-func initWebServer() *gin.Engine {
+func initWebServer(jhd ijwt.Handler) *gin.Engine {
 	server := gin.Default()
 	server.Use(cors.New(cors.Config{
 		AllowOrigins: []string{"http://localhost:3000"},
@@ -68,7 +69,7 @@ func initWebServer() *gin.Engine {
 	server.Use(sessions.Sessions("mysession", store))
 	//server.Use(middleware.NewLoginMiddlewareBuilder().IgnorePaths("/users/login").
 	//	IgnorePaths("/users/signup").Build())
-	server.Use(middleware.NewLoginJWTMiddlewareBuilder().IgnorePaths("/users/login").
+	server.Use(middleware.NewLoginJWTMiddlewareBuilder(jhd).IgnorePaths("/users/login").
 		IgnorePaths("/users/signup").IgnorePaths("/users/login_sms/code/send").
 		IgnorePaths("/users/login_sms").
 		IgnorePaths("/oauth2/wechat/authurl").
@@ -97,7 +98,7 @@ func initRedis() *redis.Client {
 	return rdb
 }
 
-func initUser(db *gorm.DB, rdb *redis.Client) *web.UserHandler {
+func initUser(db *gorm.DB, rdb *redis.Client, jhd ijwt.Handler) *web.UserHandler {
 	ud := dao.NewUserDAO(db)
 	rd := cache.NewUserCache(rdb)
 	repo := repository.NewUserRepository(ud, rd)
@@ -112,15 +113,15 @@ func initUser(db *gorm.DB, rdb *redis.Client) *web.UserHandler {
 	smsSvc := localsms.NewService()
 	rateSvc := ratelimit.NewRateLimitSMSService(smsSvc, limiter.NewRedisSlidingWindowLimiter(rdb, time.Second, 10))
 	codeSvc := service.NewCodeService(codeRepo, rateSvc)
-	u := web.NewUserHandler(svc, codeSvc)
+	u := web.NewUserHandler(svc, codeSvc, jhd)
 	return u
 }
 
-func initWechat(appId string, appSecrect string, db *gorm.DB, rdb *redis.Client) *web.OAuth2WechatHandler {
+func initWechat(appId string, appSecrect string, db *gorm.DB, rdb *redis.Client, jhd ijwt.Handler) *web.OAuth2WechatHandler {
 	svc := wechat.NewService(appId, appSecrect)
 	ud := dao.NewUserDAO(db)
 	rd := cache.NewUserCache(rdb)
 	repo := repository.NewUserRepository(ud, rd)
 	userSvc := service.NewUserService(repo)
-	return web.NewOAuth2WechatHandler(svc, userSvc)
+	return web.NewOAuth2WechatHandler(svc, userSvc, jhd)
 }

@@ -1,20 +1,22 @@
 package middleware
 
 import (
-	"basic_go/webook/internal/web"
+	ijwt "basic_go/webook/internal/web/jwt"
 	"github.com/gin-gonic/gin"
 	jwt "github.com/golang-jwt/jwt/v5"
 	"net/http"
 	"strings"
-	"time"
 )
 
 type LoginJWTMiddlewareBuilder struct {
 	paths []string
+	ijwt.Handler
 }
 
-func NewLoginJWTMiddlewareBuilder() *LoginJWTMiddlewareBuilder {
-	return &LoginJWTMiddlewareBuilder{}
+func NewLoginJWTMiddlewareBuilder(hdl ijwt.Handler) *LoginJWTMiddlewareBuilder {
+	return &LoginJWTMiddlewareBuilder{
+		Handler: hdl,
+	}
 }
 
 func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
@@ -36,9 +38,9 @@ func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
 			return
 		}
 		tokenStr := segs[1]
-		claims := &web.UserClaims{}
+		claims := &ijwt.UserClaims{}
 		token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
-			return []byte("uX6}oS1`eP0:jY0-oI9:oE4^wD2;tL4@"), nil
+			return ijwt.JWTKey, nil
 		})
 		if err != nil {
 			ctx.AbortWithStatus(http.StatusUnauthorized)
@@ -48,21 +50,13 @@ func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
-		if claims.UserAgent != ctx.Request.UserAgent() {
+		err = l.CheckSession(ctx, claims.Ssid)
+		if err != nil {
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
-		if claims.ExpiresAt.Sub(time.Now()) < time.Minute*50 {
-			claims.ExpiresAt = jwt.NewNumericDate(time.Now().Add(time.Minute))
-			tokenStr, err = token.SignedString([]byte("uX6}oS1`eP0:jY0-oI9:oE4^wD2;tL4@"))
-			if err != nil {
-				ctx.String(http.StatusInternalServerError, "系统错误")
-				return
-			}
-			ctx.Header("x-jwt-token", tokenStr)
-		}
 
-		ctx.Set("claims", claims)
+		ctx.Set("users", claims)
 	}
 }
 

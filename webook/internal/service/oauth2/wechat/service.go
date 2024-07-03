@@ -57,7 +57,10 @@ func (s *service) VerifyCode(ctx context.Context, code string) (domain.WechatInf
 	if res.ErrCode != 0 {
 		return domain.WechatInfo{}, fmt.Errorf("微信返回错误信息: %s", res.ErrMsg)
 	}
-	return domain.WechatInfo{}, nil
+	return domain.WechatInfo{
+		OpenId:  res.OpenId,
+		UnionId: res.UnionId,
+	}, nil
 
 }
 

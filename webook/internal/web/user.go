@@ -3,13 +3,13 @@ package web
 import (
 	"basic_go/webook/internal/domain"
 	"basic_go/webook/internal/service"
+	ijwt "basic_go/webook/internal/web/jwt"
 	"errors"
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
-	jwt "github.com/golang-jwt/jwt/v5"
+	"github.com/golang-jwt/jwt/v5"
 	"net/http"
-	"time"
 )
 
 const (
@@ -24,15 +24,16 @@ type UserHandler struct {
 	codeSvc          service.CodeService
 	emailRegexExp    *regexp.Regexp
 	passwordRegexExp *regexp.Regexp
-	jwtHandler
+	ijwt.Handler
 }
 
-func NewUserHandler(svc service.UserService, codeSvc service.CodeService) *UserHandler {
+func NewUserHandler(svc service.UserService, codeSvc service.CodeService, hdl ijwt.Handler) *UserHandler {
 	return &UserHandler{
 		emailRegexExp:    regexp.MustCompile(emailRegexPattern, regexp.None),
 		passwordRegexExp: regexp.MustCompile(passwordRegexPattern, regexp.None),
 		svc:              svc,
 		codeSvc:          codeSvc,
+		Handler:          hdl,
 	}
 }
 
@@ -44,6 +45,7 @@ func (u *UserHandler) RegisterRoutes(server *gin.Engine) {
 	ug.POST("/edit", u.Edit)
 	ug.POST("/login_sms/code/send", u.SendLoginSmsCode)
 	ug.POST("/login_sms", u.LoginSMS)
+	ug.GET("/refresh_token", u.RefreshToken)
 }
 
 func (u *UserHandler) Signup(ctx *gin.Context) {
@@ -187,7 +189,14 @@ func (u *UserHandler) LoginJWT(ctx *gin.Context) {
 	user, err := u.svc.Login(ctx, req.Email, req.Password)
 	switch {
 	case err == nil:
-		u.setJWTToken(ctx, user.Id)
+		err = u.SetLoginToken(ctx, user.Id)
+		if err != nil {
+			ctx.JSON(http.StatusOK, &Result{
+				Code:    1,
+				Message: "系统错误",
+			})
+			return
+		}
 		ctx.JSON(http.StatusOK, &Result{
 			Code:    0,
 			Message: "登录成功",
@@ -210,34 +219,31 @@ func (u *UserHandler) LoginJWT(ctx *gin.Context) {
 	return
 }
 
-func (u *UserHandler) setJWTToken(ctx *gin.Context, uid int64) {
-	claims := UserClaims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
-		},
-		Uid:       uid,
-		UserAgent: ctx.Request.UserAgent(),
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
-	tokenStr, err := token.SignedString([]byte("uX6}oS1`eP0:jY0-oI9:oE4^wD2;tL4@"))
-	if err != nil {
-		ctx.String(http.StatusInternalServerError, "系统错误")
-	}
-	ctx.Header("x-jwt-token", tokenStr)
-}
+//func (u *UserHandler) setJWTToken(ctx *gin.Context, uid int64) {
+//	claims := UserClaims{
+//		RegisteredClaims: jwt.RegisteredClaims{
+//			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
+//		},
+//		Uid:       uid,
+//		UserAgent: ctx.Request.UserAgent(),
+//	}
+//	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
+//	tokenStr, err := token.SignedString([]byte("uX6}oS1`eP0:jY0-oI9:oE4^wD2;tL4@"))
+//	if err != nil {
+//		ctx.String(http.StatusInternalServerError, "系统错误")
+//	}
+//	ctx.Header("x-jwt-token", tokenStr)
+//}
 
 func (u *UserHandler) ProfileJWT(ctx *gin.Context) {
-	c, ok := ctx.Get("claims")
+	c, ok := ctx.MustGet("users").(ijwt.UserClaims)
 	if !ok {
-		ctx.String(http.StatusOK, "系统错误")
+		//ctx.String(http.StatusOK, "系统错误"
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
 	}
-	claims, ok := c.(*UserClaims)
-	if !ok {
-		ctx.String(http.StatusOK, "系统错误")
-	}
-	id := claims.Uid
 
-	user, err := u.svc.Profile(ctx, id)
+	user, err := u.svc.Profile(ctx, c.Uid)
 	if err != nil {
 		ctx.JSON(http.StatusOK, &Result{
 			Code:    1,
@@ -332,9 +338,45 @@ func (u *UserHandler) LoginSMS(ctx *gin.Context) {
 		})
 		return
 	}
-	u.setJWTToken(ctx, ud.Id)
+	err = u.SetLoginToken(ctx, ud.Id)
+	if err != nil {
+		ctx.JSON(http.StatusOK, &Result{
+			Code:    3,
+			Message: "系统化错误",
+		})
+		return
+	}
 	ctx.JSON(http.StatusOK, Result{
 		Code:    0,
 		Message: "登录成功",
+	})
+}
+
+func (u *UserHandler) RefreshToken(ctx *gin.Context) {
+	tokenStr := u.ExtractToken(ctx)
+	var rc ijwt.RefreshClaims
+	token, err := jwt.ParseWithClaims(tokenStr, &rc, func(token *jwt.Token) (interface{}, error) {
+		return ijwt.RCJWTKey, nil
+	})
+	if err != nil {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+	if token == nil || !token.Valid {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+	err = u.CheckSession(ctx, rc.Ssid)
+	if err != nil {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+	err = u.SetJWTToken(ctx, rc.Uid, rc.Ssid)
+	if err != nil {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+	ctx.JSON(http.StatusOK, &Result{
+		Message: "OK",
 	})
 }
